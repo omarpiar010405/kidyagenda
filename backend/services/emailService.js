@@ -237,7 +237,8 @@ function buildEventoEmailHtml(evento, tipo, cambios = []) {
         </table>
 
         <!-- Pie -->
-        <div style="margin-top:20px;padding-top:16px;border-top:1px solid #eef0f4;">
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid #eef0f4;text-align:center;">
+          <a href="https://kidyagenda.onrender.com/" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;font-size:13px;font-weight:600;padding:10px 20px;border-radius:8px;margin-bottom:12px;">Ingresar a KidyAgenda</a>
           <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;">Notificación automática del sistema de gestión de eventos.</p>
           <p style="margin:0;font-size:12px;color:#9ca3af;">No responder a este correo.</p>
         </div>
