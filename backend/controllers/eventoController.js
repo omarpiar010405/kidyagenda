@@ -19,6 +19,112 @@ const INCLUDES_COMPLETOS = [
 
 const fechaHoy = () => new Date().toISOString().slice(0, 10);
 
+const fmtMonto = (v) => {
+  const n = Number(v);
+  if (Number.isNaN(n)) return '';
+  return n.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+};
+
+const txt = (v) => String(v ?? '').trim();
+
+const ETIQUETA_ESTADO = { pendiente: 'Pendiente', parcial: 'Pago parcial', pagado: 'Pagado' };
+
+const sumarPagos = (pagos) => (pagos || []).reduce((s, p) => s + Number(p.monto || 0), 0);
+
+/**
+ * Compara el evento antes y despues de una edicion y devuelve una lista de
+ * { etiqueta, anterior, nuevo } con los campos que cambiaron, para marcarlos en el correo.
+ */
+function compararEventos(anterior, actual) {
+  const cambios = [];
+
+  const escalares = [
+    ['nombre_festejado', 'Festejado'],
+    ['tematica', 'Temática'],
+    ['fecha_evento', 'Fecha'],
+    ['hora_inicio', 'Hora inicio'],
+    ['hora_fin', 'Hora fin'],
+    ['numero_personas', 'Número de personas'],
+    ['total_costo', 'Total'],
+    ['notas_pago', 'Notas de pago'],
+  ];
+
+  for (const [campo, etiqueta] of escalares) {
+    const a = txt(anterior?.[campo]);
+    const n = txt(actual?.[campo]);
+    if (a !== n) {
+      cambios.push({ etiqueta, anterior: a, nuevo: n });
+    }
+  }
+
+  const estadoA = anterior?.estado_pago;
+  const estadoN = actual?.estado_pago;
+  if (estadoA !== estadoN) {
+    cambios.push({
+      etiqueta: 'Estado de pago',
+      anterior: ETIQUETA_ESTADO[estadoA] || estadoA,
+      nuevo: ETIQUETA_ESTADO[estadoN] || estadoN,
+    });
+  }
+
+  const pagosA = anterior?.Pagos || [];
+  const pagosN = actual?.Pagos || [];
+  if (sumarPagos(pagosA) !== sumarPagos(pagosN) || pagosA.length !== pagosN.length) {
+    cambios.push({
+      etiqueta: 'Abonos',
+      anterior: `${pagosA.length} abono(s) · ${fmtMonto(sumarPagos(pagosA))}`,
+      nuevo: `${pagosN.length} abono(s) · ${fmtMonto(sumarPagos(pagosN))}`,
+    });
+  }
+
+  const tareasA = anterior?.TareaEventos || [];
+  const tareasN = actual?.TareaEventos || [];
+  const completadas = (lista) => lista.filter((t) => t.completada).length;
+  if (tareasA.length !== tareasN.length || completadas(tareasA) !== completadas(tareasN)) {
+    cambios.push({
+      etiqueta: 'Tareas',
+      anterior: `${tareasA.length} (${completadas(tareasA)} completadas)`,
+      nuevo: `${tareasN.length} (${completadas(tareasN)} completadas)`,
+    });
+  }
+
+  const extrasA = anterior?.ExtraMobiliarios || [];
+  const extrasN = actual?.ExtraMobiliarios || [];
+  if (extrasA.length !== extrasN.length) {
+    cambios.push({
+      etiqueta: 'Extras / mobiliario',
+      anterior: `${extrasA.length}`,
+      nuevo: `${extrasN.length}`,
+    });
+  }
+
+  const detA = anterior?.DetalleOperativo || {};
+  const detN = actual?.DetalleOperativo || {};
+  const notasOper = [
+    ['decoracion_notas', 'Decoración'],
+    ['peticiones', 'Peticiones'],
+    ['actividades', 'Actividades'],
+    ['comida_notas', 'Comida'],
+  ];
+  for (const [campo, etiqueta] of notasOper) {
+    const a = txt(detA[campo]);
+    const n = txt(detN[campo]);
+    if (a !== n) cambios.push({ etiqueta, anterior: a, nuevo: n });
+  }
+
+  const cliA = anterior?.Cliente || {};
+  const cliN = actual?.Cliente || {};
+  if (txt(cliA.nombre_completo) !== txt(cliN.nombre_completo) || txt(cliA.telefono) !== txt(cliN.telefono)) {
+    cambios.push({
+      etiqueta: 'Cliente',
+      anterior: txt(cliA.nombre_completo) || '—',
+      nuevo: txt(cliN.nombre_completo) || '—',
+    });
+  }
+
+  return cambios;
+}
+
 /**
  * Calcula el estado de pago a partir del total y la suma de abonos:
  * sin abonos -> pendiente; menos del total -> parcial; total cubierto -> pagado.
@@ -171,6 +277,9 @@ exports.actualizar = async (req, res, next) => {
     const evento = await Evento.findByPk(req.params.id);
     if (!evento) return res.status(404).json({ error: 'Evento no encontrado' });
 
+    // Snapshot del evento ANTES de la edicion (para marcar los cambios en el correo).
+    const eventoAnterior = await Evento.findByPk(req.params.id, { include: INCLUDES_COMPLETOS });
+
     const {
       detalles_operativos,
       tareas,
@@ -231,7 +340,8 @@ exports.actualizar = async (req, res, next) => {
 
     const eventoActualizado = await Evento.findByPk(evento.id_evento, { include: INCLUDES_COMPLETOS });
 
-    notificarEvento(eventoActualizado, 'actualizado');
+    const cambios = compararEventos(eventoAnterior, eventoActualizado);
+    notificarEvento(eventoActualizado, 'actualizado', cambios);
 
     res.json(eventoActualizado);
   } catch (err) {

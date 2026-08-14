@@ -39,8 +39,9 @@ function etiquetaEstado(estado) {
 
 /**
  * Construye el HTML del correo de notificacion.
+ * cambios: [{ etiqueta, anterior, nuevo }] solo para el correo de actualizacion.
  */
-function buildEventoEmailHtml(evento, tipo) {
+function buildEventoEmailHtml(evento, tipo, cambios = []) {
   const esCreado = tipo === 'creado';
   const titulo = esCreado ? 'Nuevo evento registrado' : 'Evento actualizado';
   const colorAccion = esCreado ? '#4f46e5' : '#f59e0b';
@@ -60,15 +61,49 @@ function buildEventoEmailHtml(evento, tipo) {
     ['Saldo pendiente', formatearMoneda(saldo)],
   ];
 
+  // Etiquetas de filas que cambiaron (para marcarlas con un punto y fondo)
+  const etiquetasCambiadas = new Set(cambios.map((c) => c.etiqueta));
+  const filaCambiada = (etiqueta) => {
+    if (etiquetasCambiadas.has(etiqueta)) return true;
+    // El detalle agrupa horario en una sola fila
+    if (etiqueta === 'Horario' && (etiquetasCambiadas.has('Hora inicio') || etiquetasCambiadas.has('Hora fin'))) return true;
+    return false;
+  };
+
   const filasDetalleHtml = filasDetalle
-    .map(
-      ([k, v]) => `
-      <tr>
-        <td style="padding:8px 12px;font-size:13px;color:#6b7280;width:45%;background:#f9fafb;border-bottom:1px solid #eef0f4;vertical-align:top;">${k}</td>
+    .map(([k, v]) => {
+      const cambia = filaCambiada(k);
+      return `
+      <tr style="${cambia ? 'background:#fff7ed;' : ''}">
+        <td style="padding:8px 12px;font-size:13px;color:#6b7280;width:45%;background:${cambia ? '#ffedd5' : '#f9fafb'};border-bottom:1px solid #eef0f4;vertical-align:top;">
+          ${cambia ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#f97316;margin-right:6px;vertical-align:middle;"></span>' : ''}${k}
+        </td>
         <td style="padding:8px 12px;font-size:14px;color:#111827;border-bottom:1px solid #eef0f4;vertical-align:top;"><strong>${v}</strong></td>
-      </tr>`
-    )
+      </tr>`;
+    })
     .join('');
+
+  // Seccion "Campos modificados" para el correo de actualizacion
+  const cambiosHtml = cambios.length
+    ? `
+      <tr>
+        <td style="padding:10px 12px;background:#fff7ed;border-bottom:1px solid #eef0f4;" colspan="2">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:#c2410c;font-weight:700;margin-bottom:8px;">Campos modificados</div>
+          ${cambios
+            .map(
+              (c) => `
+            <div style="font-size:13px;color:#374151;padding:4px 0;border-bottom:1px dashed #fde68a;">
+              <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#f97316;margin-right:8px;vertical-align:middle;"></span>
+              <strong>${escapeHtml(c.etiqueta)}:</strong>&nbsp;
+              <span style="color:#9ca3af;text-decoration:line-through;">${escapeHtml(c.anterior || '—')}</span>
+              <span style="color:#6b7280;">&nbsp;→&nbsp;</span>
+              <span style="color:#111827;font-weight:600;">${escapeHtml(c.nuevo || '—')}</span>
+            </div>`
+            )
+            .join('')}
+        </td>
+      </tr>`
+    : '';
 
   const tareas = (evento.TareaEventos || []);
   const tareasHtml = tareas.length
@@ -191,6 +226,7 @@ function buildEventoEmailHtml(evento, tipo) {
         </div>
 
         <table style="width:100%;border-collapse:collapse;border-radius:8px;overflow:hidden;border:1px solid #eef0f4;">
+          ${cambiosHtml}
           ${clienteHtml}
           ${filasDetalleHtml}
           ${notasPagoHtml}
@@ -216,7 +252,7 @@ function buildEventoEmailHtml(evento, tipo) {
  * Se ejecuta de forma asincrona / "fire and forget": nunca bloquea ni
  * revienta la respuesta HTTP del endpoint que la invoca.
  */
-async function notificarEvento(evento, tipo = 'creado') {
+async function notificarEvento(evento, tipo = 'creado', cambios = []) {
   try {
     if (!process.env.SENDGRID_API_KEY) {
       console.warn('[emailService] SENDGRID_API_KEY no configurada. Se omite el envio de correo.');
@@ -233,7 +269,7 @@ async function notificarEvento(evento, tipo = 'creado') {
       to: destinatarios.map((d) => d.email),
       from: process.env.SENDGRID_FROM_EMAIL,
       subject: `Evento ${tipo}: ${evento.nombre_festejado} (${evento.fecha_evento})`,
-      html: buildEventoEmailHtml(evento, tipo),
+      html: buildEventoEmailHtml(evento, tipo, cambios),
     };
 
     await sgMail.send(msg);

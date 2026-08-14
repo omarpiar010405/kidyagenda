@@ -151,6 +151,11 @@
 
 .panel-dia-header h3 { margin: 0; }
 
+.btn-nuevo-evento {
+  width: 100%;
+  margin: 4px 0 12px;
+}
+
 .lista-eventos-dia { list-style: none; padding: 0; margin: 12px 0; }
 .lista-eventos-dia li {
   padding: 8px;
@@ -162,6 +167,47 @@
   gap: 8px;
 }
 .lista-eventos-dia li:hover { background: #f7f7fb; }
+
+/* Tarjeta de evento dentro del panel del dia */
+.lista-eventos-dia li.tarjeta-evento-resumen {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 6px;
+  background: #f9fafb;
+  border: 1px solid #eef0f4;
+  border-bottom: 1px solid #eef0f4;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.lista-eventos-dia li.tarjeta-evento-resumen:hover { background: #f1f2f7; }
+
+.tarjeta-festejado {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.tarjeta-festejado strong {
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.tarjeta-datos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 13px;
+  color: #555;
+}
+
+.tarjeta-datos span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 
 .badge {
   font-size: 10px;
@@ -380,7 +426,7 @@
 /* ===================================================== */
 @media (max-width: 768px) {
   .app-layout {
-    padding: 0 0 76px 0; /* espacio para la barra inferior fija */
+    padding: 0 10px 76px; /* espacio para la barra inferior fija + aire lateral */
   }
 
   .app-header {
@@ -440,18 +486,31 @@
   .pagina-calendario {
     flex-direction: column;
     gap: 12px;
+    align-items: stretch;
   }
 
-  .calendario { padding: 10px; }
+  .calendario {
+    padding: 12px 8px;
+    width: 100%;
+    margin: 0 auto;
+  }
 
-  /* Celdas compactas: solo numero + puntos de eventos */
+  .calendario-header h2 {
+    font-size: 16px;
+  }
+
+  .calendario-header button {
+    padding: 6px 12px;
+  }
+
+  /* Celdas compactas: numero + puntos de eventos, bien tocables */
   .calendario-celda {
-    min-height: 44px;
+    min-height: 52px;
     padding: 3px;
-    border-radius: 5px;
+    border-radius: 6px;
   }
 
-  .calendario-numero { font-size: 12px; }
+  .calendario-numero { font-size: 13px; }
 
   .calendario-evento-chip {
     width: 7px;
@@ -489,7 +548,7 @@
     overflow-y: auto;
     border-radius: 16px 16px 0 0;
     box-shadow: 0 -4px 20px rgba(0,0,0,0.18);
-    padding: 14px 16px 24px;
+    padding: 14px 16px 84px; /* padding inferior para que el contenido no quede tras la barra de navegacion */
     z-index: 80;
     animation: sheet-up 0.22s ease-out;
   }
