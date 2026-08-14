@@ -71,9 +71,35 @@
   padding: 4px 12px;
 }
 
+.calendario-titulo-mes {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 .calendario-header h2 {
   font-size: 18px;
   margin: 0;
+}
+
+.contador-mes {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #4f46e5;
+  background: #eef0ff;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.contador-mes strong {
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .calendario-grid {
@@ -501,6 +527,16 @@
 
   .calendario-header button {
     padding: 6px 12px;
+  }
+
+  .calendario-titulo-mes {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .contador-mes {
+    font-size: 11px;
+    padding: 2px 8px;
   }
 
   /* Celdas compactas: numero + puntos de eventos, bien tocables */

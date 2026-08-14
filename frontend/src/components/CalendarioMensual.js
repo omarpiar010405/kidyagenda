@@ -32,11 +32,21 @@ export default function CalendarioMensual({ mes, anio, eventosPorDia, onCambiarM
   const esHoy = (dia) =>
     dia && hoy.getFullYear() === anio && hoy.getMonth() + 1 === mes && hoy.getDate() === dia;
 
+  const totalEventosMes = Object.values(eventosPorDia || {}).reduce(
+    (sum, lista) => sum + (Array.isArray(lista) ? lista.length : 0),
+    0
+  );
+
   return (
     <div className="calendario">
       <div className="calendario-header">
         <button onClick={() => onCambiarMes(-1)}>‹</button>
-        <h2>{MESES[mes - 1]} {anio}</h2>
+        <div className="calendario-titulo-mes">
+          <h2>{MESES[mes - 1]} {anio}</h2>
+          <span className="contador-mes">
+            <strong>{totalEventosMes}</strong> {totalEventosMes === 1 ? 'evento' : 'eventos'} este mes
+          </span>
+        </div>
         <button onClick={() => onCambiarMes(1)}>›</button>
       </div>
 
