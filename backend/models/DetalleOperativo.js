@@ -22,6 +22,38 @@ const DetalleOperativo = sequelize.define('DetalleOperativo', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  proveedores: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    get() {
+      const raw = this.getDataValue('proveedores');
+      if (!raw) return [];
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return [];
+      }
+    },
+    set(val) {
+      this.setDataValue('proveedores', Array.isArray(val) ? JSON.stringify(val) : val);
+    },
+  },
+  empleados: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    get() {
+      const raw = this.getDataValue('empleados');
+      if (!raw) return [];
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return [];
+      }
+    },
+    set(val) {
+      this.setDataValue('empleados', Array.isArray(val) ? JSON.stringify(val) : val);
+    },
+  },
 }, {
   tableName: 'detalles_operativos',
   timestamps: true,

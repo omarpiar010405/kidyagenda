@@ -112,12 +112,7 @@ function buildEventoEmailHtml(evento, tipo, cambios = []) {
         <td style="padding:8px 12px;font-size:13px;color:#6b7280;width:45%;background:#f9fafb;border-bottom:1px solid #eef0f4;vertical-align:top;">Tareas</td>
         <td style="padding:8px 12px;border-bottom:1px solid #eef0f4;font-size:13px;color:#111827;">
           ${tareas
-            .map(
-              (t) => `
-            <div style="padding:2px 0;${t.completada ? 'color:#9ca3af;text-decoration:line-through;' : ''}">
-              ${t.completada ? '✔' : '○'} ${escapeHtml(t.descripcion)}
-            </div>`
-            )
+            .map((t) => `<div style="padding:2px 0;">${escapeHtml(t.descripcion)}</div>`)
             .join('')}
         </td>
       </tr>`
@@ -144,7 +139,42 @@ function buildEventoEmailHtml(evento, tipo, cambios = []) {
     ['Comida', detalle.comida_notas],
   ].filter(([, v]) => v);
 
-  const notasHtml = notas.length
+  const proveedores = (detalle.proveedores || []).filter(
+    (p) => p.negocio || p.proveedor || p.telefono || p.tipo
+  );
+  const proveedoresHtml = proveedores.length
+    ? `<div style="padding:2px 0;"><strong style="color:#4b5563;">Proveedores:</strong></div>${proveedores
+        .map((p) => {
+          const detalleProv = [
+            p.tipo,
+            p.negocio,
+            p.proveedor,
+            p.telefono,
+            p.hora_llegada ? `Llegada ${p.hora_llegada.slice(0, 5)}` : null,
+          ]
+            .filter(Boolean)
+            .map(escapeHtml)
+            .join(' · ');
+          const notasProv = p.notas
+            ? `<div style="padding:1px 0 1px 12px;color:#6b7280;font-size:12px;">${escapeHtml(p.notas)}</div>`
+            : '';
+          return `<div style="padding:1px 0 1px 12px;color:#111827;">${detalleProv}</div>${notasProv}`;
+        })
+        .join('')}` : '';
+
+  const empleados = (detalle.empleados || []).filter((e) => e.nombre || e.hora_llegada);
+  const empleadosHtml = empleados.length
+    ? `<div style="padding:2px 0;"><strong style="color:#4b5563;">Empleados:</strong></div>${empleados
+        .map((e) => {
+          const detalleEmp = [e.nombre, e.hora_llegada ? `Llegada ${e.hora_llegada.slice(0, 5)}` : null]
+            .filter(Boolean)
+            .map(escapeHtml)
+            .join(' · ');
+          return `<div style="padding:1px 0 1px 12px;color:#111827;">${detalleEmp}</div>`;
+        })
+        .join('')}` : '';
+
+  const notasHtml = notas.length || proveedores.length || empleados.length
     ? `
       <tr>
         <td style="padding:8px 12px;font-size:13px;color:#6b7280;width:45%;background:#f9fafb;border-bottom:1px solid #eef0f4;vertical-align:top;">Detalles operativos</td>
@@ -152,6 +182,8 @@ function buildEventoEmailHtml(evento, tipo, cambios = []) {
           ${notas
             .map(([k, v]) => `<div style="padding:2px 0;"><strong style="color:#4b5563;">${escapeHtml(k)}:</strong> ${escapeHtml(v)}</div>`)
             .join('')}
+          ${proveedoresHtml}
+          ${empleadosHtml}
         </td>
       </tr>`
     : '';

@@ -79,12 +79,16 @@ function compararEventos(anterior, actual) {
 
   const tareasA = anterior?.TareaEventos || [];
   const tareasN = actual?.TareaEventos || [];
-  const completadas = (lista) => lista.filter((t) => t.completada).length;
-  if (tareasA.length !== tareasN.length || completadas(tareasA) !== completadas(tareasN)) {
+  const textoTareas = (lista) =>
+    (lista || [])
+      .map((t) => t.descripcion)
+      .sort()
+      .join(';');
+  if (textoTareas(tareasA) !== textoTareas(tareasN)) {
     cambios.push({
       etiqueta: 'Tareas',
-      anterior: `${tareasA.length} (${completadas(tareasA)} completadas)`,
-      nuevo: `${tareasN.length} (${completadas(tareasN)} completadas)`,
+      anterior: `${tareasA.length} tarea(s)`,
+      nuevo: `${tareasN.length} tarea(s)`,
     });
   }
 
@@ -110,6 +114,30 @@ function compararEventos(anterior, actual) {
     const a = txt(detA[campo]);
     const n = txt(detN[campo]);
     if (a !== n) cambios.push({ etiqueta, anterior: a, nuevo: n });
+  }
+
+  const firmaProveedores = (provs) =>
+    (provs || [])
+      .map((p) =>
+        `${p.tipo || ''}|${p.negocio || ''}|${p.proveedor || ''}|${p.telefono || ''}|${p.hora_llegada || ''}|${p.notas || ''}`
+      )
+      .join(';');
+  if (firmaProveedores(detA.proveedores) !== firmaProveedores(detN.proveedores)) {
+    cambios.push({
+      etiqueta: 'Proveedores',
+      anterior: `${(detA.proveedores || []).length} proveedor(es)`,
+      nuevo: `${(detN.proveedores || []).length} proveedor(es)`,
+    });
+  }
+
+  const firmaEmpleados = (emps) =>
+    (emps || []).map((e) => `${e.nombre || ''}|${e.hora_llegada || ''}`).join(';');
+  if (firmaEmpleados(detA.empleados) !== firmaEmpleados(detN.empleados)) {
+    cambios.push({
+      etiqueta: 'Empleados',
+      anterior: `${(detA.empleados || []).length} empleado(s)`,
+      nuevo: `${(detN.empleados || []).length} empleado(s)`,
+    });
   }
 
   const cliA = anterior?.Cliente || {};
@@ -232,7 +260,7 @@ exports.crear = async (req, res, next) => {
 
     if (Array.isArray(tareas) && tareas.length) {
       await TareaEvento.bulkCreate(
-        tareas.map((t) => ({ id_evento: nuevoEvento.id_evento, descripcion: t.descripcion, completada: !!t.completada }))
+        tareas.map((t) => ({ id_evento: nuevoEvento.id_evento, descripcion: t.descripcion }))
       );
     }
 
@@ -305,7 +333,7 @@ exports.actualizar = async (req, res, next) => {
       await TareaEvento.destroy({ where: { id_evento: evento.id_evento } });
       if (tareas.length) {
         await TareaEvento.bulkCreate(
-          tareas.map((t) => ({ id_evento: evento.id_evento, descripcion: t.descripcion, completada: !!t.completada }))
+          tareas.map((t) => ({ id_evento: evento.id_evento, descripcion: t.descripcion }))
         );
       }
     }

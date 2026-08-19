@@ -3,6 +3,12 @@ import { crearEvento, actualizarEvento, eliminarEvento, getEvento } from '../api
 
 const PETICIONES_OPCIONES = ['Hielera', 'Microondas'];
 
+const TIPOS_PROVEEDOR = ['Decorador', 'Bufet', 'Animador', 'Sonido', 'Iluminación', 'Fotografía', 'Mobiliario', 'Otro'];
+
+const PROVEEDOR_VACIO = { tipo: '', negocio: '', proveedor: '', telefono: '', hora_llegada: '', notas: '' };
+
+const EMPLEADO_VACIO = { nombre: '', hora_llegada: '' };
+
 const ESTADO_VACIO = {
   cliente: { nombre_completo: '', telefono: '' },
   id_cliente: null,
@@ -19,10 +25,12 @@ const ESTADO_VACIO = {
     peticiones: PETICIONES_OPCIONES.join(', '),
     actividades: '',
     comida_notas: '',
+    proveedores: [],
+    empleados: [],
   },
   tareas: [
-    { descripcion: 'Mobiliario para personas', completada: false },
-    { descripcion: 'Arco de bienvenida', completada: false },
+    { descripcion: 'Mobiliario para personas' },
+    { descripcion: 'Arco de bienvenida' },
   ],
   extras: [
     { articulo: 'Mesas largas', cantidad: 2 },
@@ -90,22 +98,27 @@ export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
     setCargando(true);
     getEvento(eventoId)
       .then((ev) => {
+        const detalle = ev.DetalleOperativo || ESTADO_VACIO.detalles_operativos;
         setForm({
-          id_cliente: ev.id_cliente,
-          cliente: ev.Cliente || { nombre_completo: '', telefono: '' },
-          nombre_festejado: ev.nombre_festejado || '',
-          tematica: ev.tematica || '',
-          fecha_evento: ev.fecha_evento,
-          hora_inicio: ev.hora_inicio?.slice(0, 5) || '',
-          hora_fin: ev.hora_fin?.slice(0, 5) || '',
-          numero_personas: ev.numero_personas || '',
-          total_costo: ev.total_costo || '',
-          notas_pago: ev.notas_pago || '',
-          detalles_operativos: ev.DetalleOperativo || ESTADO_VACIO.detalles_operativos,
-          tareas: ev.TareaEventos || [],
-          extras: ev.ExtraMobiliarios || [],
-          pagos: ev.Pagos || [],
-        });
+            id_cliente: ev.id_cliente,
+            cliente: ev.Cliente || { nombre_completo: '', telefono: '' },
+            nombre_festejado: ev.nombre_festejado || '',
+            tematica: ev.tematica || '',
+            fecha_evento: ev.fecha_evento,
+            hora_inicio: ev.hora_inicio?.slice(0, 5) || '',
+            hora_fin: ev.hora_fin?.slice(0, 5) || '',
+            numero_personas: ev.numero_personas || '',
+            total_costo: ev.total_costo || '',
+            notas_pago: ev.notas_pago || '',
+            detalles_operativos: {
+              ...detalle,
+              proveedores: Array.isArray(detalle.proveedores) ? detalle.proveedores : [],
+              empleados: Array.isArray(detalle.empleados) ? detalle.empleados : [],
+            },
+            tareas: ev.TareaEventos || [],
+            extras: ev.ExtraMobiliarios || [],
+            pagos: ev.Pagos || [],
+          });
       })
       .finally(() => setCargando(false));
   }, [eventoId]);
@@ -155,21 +168,65 @@ export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
 
   const agregarTarea = () => {
     if (!nuevaTarea.trim()) return;
-    setForm((f) => ({ ...f, tareas: [...f.tareas, { descripcion: nuevaTarea, completada: false }] }));
+    setForm((f) => ({ ...f, tareas: [...f.tareas, { descripcion: nuevaTarea }] }));
     setNuevaTarea('');
-  };
-
-  const toggleTarea = (idx) => {
-    setForm((f) => {
-      const tareas = [...f.tareas];
-      tareas[idx] = { ...tareas[idx], completada: !tareas[idx].completada };
-      return { ...f, tareas };
-    });
   };
 
   const quitarTarea = (idx) => {
     setForm((f) => ({ ...f, tareas: f.tareas.filter((_, i) => i !== idx) }));
   };
+
+  const agregarProveedor = () =>
+    setForm((f) => ({
+      ...f,
+      detalles_operativos: {
+        ...f.detalles_operativos,
+        proveedores: [...(f.detalles_operativos.proveedores || []), { ...PROVEEDOR_VACIO }],
+      },
+    }));
+
+  const actualizarProveedor = (idx, campo, valor) =>
+    setForm((f) => {
+      const proveedores = (f.detalles_operativos.proveedores || []).map((p, i) =>
+        i === idx ? { ...p, [campo]: valor } : p
+      );
+      return { ...f, detalles_operativos: { ...f.detalles_operativos, proveedores } };
+    });
+
+  const quitarProveedor = (idx) =>
+    setForm((f) => ({
+      ...f,
+      detalles_operativos: {
+        ...f.detalles_operativos,
+        proveedores: (f.detalles_operativos.proveedores || []).filter((_, i) => i !== idx),
+      },
+    }));
+
+  const agregarEmpleado = () =>
+    setForm((f) => ({
+      ...f,
+      detalles_operativos: {
+        ...f.detalles_operativos,
+        empleados: [...(f.detalles_operativos.empleados || []), { ...EMPLEADO_VACIO }],
+      },
+    }));
+
+  const actualizarEmpleado = (idx, campo, valor) =>
+    setForm((f) => {
+      const empleados = (f.detalles_operativos.empleados || []).map((e, i) =>
+        i === idx ? { ...e, [campo]: valor } : e
+      );
+      return { ...f, detalles_operativos: { ...f.detalles_operativos, empleados } };
+    });
+
+  const quitarEmpleado = (idx) =>
+    setForm((f) => ({
+      ...f,
+      detalles_operativos: {
+        ...f.detalles_operativos,
+        empleados: (f.detalles_operativos.empleados || []).filter((_, i) => i !== idx),
+      },
+    }));
 
   const agregarExtra = () => {
     if (!nuevoExtra.articulo.trim()) return;
@@ -407,15 +464,89 @@ export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
                 value={form.detalles_operativos.comida_notas}
                 onChange={(e) => actualizarDetalle('comida_notas', e.target.value)}
               />
+
+              <label className="campo-etiqueta">Proveedores (decorador, bufet, animador…)</label>
+              {(form.detalles_operativos.proveedores || []).map((prov, idx) => (
+                <div key={idx} className="proveedor-item">
+                  <div className="fila">
+                    <label>Tipo
+                      <select
+                        value={prov.tipo}
+                        onChange={(e) => actualizarProveedor(idx, 'tipo', e.target.value)}
+                      >
+                        <option value="">—</option>
+                        {TIPOS_PROVEEDOR.map((t) => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>Hora llegada
+                      <input
+                        type="time"
+                        value={prov.hora_llegada}
+                        onChange={(e) => actualizarProveedor(idx, 'hora_llegada', e.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <div className="fila">
+                    <input
+                      placeholder="Negocio"
+                      value={prov.negocio || ''}
+                      onChange={(e) => actualizarProveedor(idx, 'negocio', e.target.value)}
+                    />
+                    <input
+                      placeholder="Proveedor (contacto)"
+                      value={prov.proveedor || ''}
+                      onChange={(e) => actualizarProveedor(idx, 'proveedor', e.target.value)}
+                    />
+                    <input
+                      placeholder="Número"
+                      value={prov.telefono || ''}
+                      onChange={(e) => actualizarProveedor(idx, 'telefono', e.target.value)}
+                    />
+                    <button type="button" className="btn-quitar" onClick={() => quitarProveedor(idx)}>✕</button>
+                  </div>
+                  <textarea
+                    className="notas-proveedor"
+                    placeholder="Notas (precio, menú, cantidades…)"
+                    value={prov.notas || ''}
+                    onChange={(e) => actualizarProveedor(idx, 'notas', e.target.value)}
+                  />
+                </div>
+              ))}
+              <button type="button" className="btn-secundario" onClick={agregarProveedor}>
+                + Agregar proveedor
+              </button>
+
+              <label className="campo-etiqueta">Empleados</label>
+              {(form.detalles_operativos.empleados || []).map((emp, idx) => (
+                <div key={idx} className="empleado-item">
+                  <input
+                    placeholder="Nombre del empleado"
+                    value={emp.nombre || ''}
+                    onChange={(e) => actualizarEmpleado(idx, 'nombre', e.target.value)}
+                  />
+                  <label>Hora llegada
+                    <input
+                      type="time"
+                      value={emp.hora_llegada}
+                      onChange={(e) => actualizarEmpleado(idx, 'hora_llegada', e.target.value)}
+                    />
+                  </label>
+                  <button type="button" className="btn-quitar" onClick={() => quitarEmpleado(idx)}>✕</button>
+                </div>
+              ))}
+              <button type="button" className="btn-secundario" onClick={agregarEmpleado}>
+                + Agregar empleado
+              </button>
             </fieldset>
 
             <fieldset>
               <legend>Tareas</legend>
               {form.tareas.map((t, idx) => (
                 <div key={idx} className="fila-tarea">
-                  <input type="checkbox" checked={!!t.completada} onChange={() => toggleTarea(idx)} />
-                  <span className={t.completada ? 'tachado' : ''}>{t.descripcion}</span>
-                  <button type="button" onClick={() => quitarTarea(idx)}>✕</button>
+                  <span className="tarea-descripcion">{t.descripcion}</span>
+                  <button type="button" className="btn-quitar" onClick={() => quitarTarea(idx)}>✕</button>
                 </div>
               ))}
               <div className="fila">

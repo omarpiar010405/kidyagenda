@@ -15,11 +15,6 @@ const TareaEvento = sequelize.define('TareaEvento', {
     type: DataTypes.STRING(255),
     allowNull: false,
   },
-  completada: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false,
-  },
 }, {
   tableName: 'tareas_evento',
   timestamps: true,

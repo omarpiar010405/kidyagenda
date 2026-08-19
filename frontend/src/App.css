@@ -308,6 +308,75 @@
   padding: 4px 0;
 }
 
+.tarea-descripcion {
+  flex: 1;
+  font-weight: 600;
+}
+
+.proveedor-item {
+  background: #f9fafb;
+  border: 1px solid #eef0f4;
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.proveedor-item .fila {
+  margin-bottom: 6px;
+}
+
+.proveedor-item .fila:last-child {
+  margin-bottom: 0;
+}
+
+.proveedor-item label {
+  flex: 1 1 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: #555;
+}
+
+.proveedor-item label input,
+.proveedor-item label select {
+  width: 100%;
+}
+
+.notas-proveedor {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.empleado-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f9fafb;
+  border: 1px solid #eef0f4;
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.empleado-item input {
+  flex: 1;
+}
+
+.empleado-item label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: #555;
+  flex: 0 0 150px;
+}
+
+.empleado-item label input,
+.empleado-item label select {
+  width: 100%;
+}
+
 /* --- Casillas de peticiones especiales --- */
 .campo-etiqueta {
   display: block;
@@ -410,8 +479,6 @@
 .resumen-pagos span { color: #6b7280; }
 
 .resumen-pagos strong { font-size: 15px; }
-
-.tachado { text-decoration: line-through; color: #999; }
 
 .modal-acciones {
   display: flex;

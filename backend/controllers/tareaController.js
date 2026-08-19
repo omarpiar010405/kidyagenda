@@ -11,11 +11,10 @@ exports.listarPorEvento = async (req, res, next) => {
 
 exports.crear = async (req, res, next) => {
   try {
-    const { descripcion, completada } = req.body;
+    const { descripcion } = req.body;
     const tarea = await TareaEvento.create({
       id_evento: req.params.idEvento,
       descripcion,
-      completada: !!completada,
     });
     res.status(201).json(tarea);
   } catch (err) {
