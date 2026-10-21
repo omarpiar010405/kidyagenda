@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { crearEvento, actualizarEvento, eliminarEvento, getEvento } from '../api/api';
 
 const PETICIONES_OPCIONES = ['Hielera', 'Microondas'];
@@ -79,6 +79,19 @@ function construirPeticiones(marcadas, resto) {
   return [...marcadas, ...(resto.trim() ? [resto.trim()] : [])].join(', ');
 }
 
+// Serializa el formulario de forma estable (mismo orden de claves) para poder
+// detectar si el usuario modifico algo comparando contra el estado inicial.
+function formaEstable(valor) {
+  if (Array.isArray(valor)) return `[${valor.map(formaEstable).join(',')}]`;
+  if (valor && typeof valor === 'object') {
+    return `{${Object.keys(valor)
+      .sort()
+      .map((k) => `${k}:${formaEstable(valor[k])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(valor ?? null);
+}
+
 export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
   const [form, setForm] = useState(() => ({
     ...ESTADO_VACIO,
@@ -92,6 +105,16 @@ export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
   const [guardando, setGuardando] = useState(false);
   const [nuevaTarea, setNuevaTarea] = useState('');
   const [nuevoExtra, setNuevoExtra] = useState({ articulo: '', cantidad: 1 });
+  // Texto libre de "peticiones especiales". Se guarda aparte para poder escribir
+  // espacios y comas sin que se recorten al re-armar la lista de peticiones.
+  const [peticionesExtra, setPeticionesExtra] = useState(
+    () => dividirPeticiones(ESTADO_VACIO.detalles_operativos.peticiones).resto
+  );
+  // Estado inicial del formulario: sirve para saber si el usuario ya edito algo.
+  const [modificado, setModificado] = useState(false);
+  // Confirmacion pendiente: 'salir' (salir sin guardar) o 'eliminar'.
+  const [confirmacion, setConfirmacion] = useState(null);
+  const formInicialRef = useRef(null);
 
   useEffect(() => {
     if (!eventoId) return;
@@ -99,7 +122,7 @@ export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
     getEvento(eventoId)
       .then((ev) => {
         const detalle = ev.DetalleOperativo || ESTADO_VACIO.detalles_operativos;
-        setForm({
+        const cargado = {
             id_cliente: ev.id_cliente,
             cliente: ev.Cliente || { nombre_completo: '', telefono: '' },
             nombre_festejado: ev.nombre_festejado || '',
@@ -118,10 +141,27 @@ export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
             tareas: ev.TareaEventos || [],
             extras: ev.ExtraMobiliarios || [],
             pagos: ev.Pagos || [],
-          });
+          };
+        formInicialRef.current = formaEstable(cargado);
+        setForm(cargado);
+        setPeticionesExtra(dividirPeticiones(detalle.peticiones).resto);
       })
       .finally(() => setCargando(false));
   }, [eventoId]);
+
+  // Para eventos nuevos, el estado inicial es el formulario vacio.
+  useEffect(() => {
+    if (eventoId) return;
+    formInicialRef.current = formaEstable(form);
+    // Solo al montar: despues las actualizaciones no deben pisar la referencia.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Detecta si el formulario cambio respecto al estado inicial.
+  useEffect(() => {
+    if (!formInicialRef.current) return;
+    setModificado(formaEstable(form) !== formInicialRef.current);
+  }, [form]);
 
   const actualizarCampo = (campo, valor) => setForm((f) => ({ ...f, [campo]: valor }));
   const actualizarCliente = (campo, valor) =>
@@ -141,7 +181,7 @@ export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
 
   const togglePeticion = (opcion) =>
     setForm((f) => {
-      const { marcadas, resto } = dividirPeticiones(f.detalles_operativos.peticiones);
+      const { marcadas } = dividirPeticiones(f.detalles_operativos.peticiones);
       const nuevas = marcadas.includes(opcion)
         ? marcadas.filter((x) => x !== opcion)
         : [...marcadas, opcion];
@@ -149,12 +189,13 @@ export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
         ...f,
         detalles_operativos: {
           ...f.detalles_operativos,
-          peticiones: construirPeticiones(nuevas, resto),
+          peticiones: construirPeticiones(nuevas, peticionesExtra),
         },
       };
     });
 
-  const actualizarPeticionExtra = (valor) =>
+  const actualizarPeticionExtra = (valor) => {
+    setPeticionesExtra(valor);
     setForm((f) => {
       const { marcadas } = dividirPeticiones(f.detalles_operativos.peticiones);
       return {
@@ -165,6 +206,7 @@ export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
         },
       };
     });
+  };
 
   const agregarTarea = () => {
     if (!nuevaTarea.trim()) return;
@@ -271,9 +313,20 @@ export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
   };
 
   const handleEliminar = async () => {
-    if (!window.confirm('¿Seguro que deseas eliminar este evento?')) return;
+    setConfirmacion(null);
     await eliminarEvento(eventoId);
     onGuardado();
+  };
+
+  // Click fuera del modal: si ya se edito algo, se pide confirmacion para
+  // no perder la informacion por un click accidental.
+  const pedirCierre = () => {
+    if (guardando) return;
+    if (modificado) {
+      setConfirmacion('salir');
+      return;
+    }
+    onCerrar();
   };
 
   const totalPagado = form.pagos.reduce((s, p) => s + (Number(p.monto) || 0), 0);
@@ -281,11 +334,11 @@ export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
   const estadoCalculado = calcularEstado(form.total_costo, form.pagos);
 
   return (
-    <div className="modal-overlay" onClick={onCerrar}>
+    <div className="modal-overlay" onClick={pedirCierre}>
       <div className="modal-contenido" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{eventoId ? 'Editar evento' : 'Nuevo evento'} — {form.fecha_evento}</h2>
-          <button className="btn-cerrar" onClick={onCerrar}>✕</button>
+          <button className="btn-cerrar" onClick={pedirCierre}>✕</button>
         </div>
 
         {cargando ? (
@@ -414,7 +467,7 @@ export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
               {form.pagos.length === 0 && (
                 <p className="sin-abonos">Aún no hay abonos registrados.</p>
               )}
-              <button type="button" className="btn-secundario" onClick={agregarPago}>
+              <button type="button" className="btn-agregar" onClick={agregarPago}>
                 + Agregar abono
               </button>
 
@@ -451,7 +504,7 @@ export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
               </div>
               <textarea
                 placeholder="Otras peticiones especiales"
-                value={dividirPeticiones(form.detalles_operativos.peticiones).resto}
+                value={peticionesExtra}
                 onChange={(e) => actualizarPeticionExtra(e.target.value)}
               />
               <textarea
@@ -514,7 +567,7 @@ export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
                   />
                 </div>
               ))}
-              <button type="button" className="btn-secundario" onClick={agregarProveedor}>
+              <button type="button" className="btn-agregar" onClick={agregarProveedor}>
                 + Agregar proveedor
               </button>
 
@@ -536,7 +589,7 @@ export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
                   <button type="button" className="btn-quitar" onClick={() => quitarEmpleado(idx)}>✕</button>
                 </div>
               ))}
-              <button type="button" className="btn-secundario" onClick={agregarEmpleado}>
+              <button type="button" className="btn-agregar" onClick={agregarEmpleado}>
                 + Agregar empleado
               </button>
             </fieldset>
@@ -585,7 +638,7 @@ export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
 
             <div className="modal-acciones">
               {eventoId && (
-                <button type="button" className="btn-peligro" onClick={handleEliminar}>
+                <button type="button" className="btn-peligro" onClick={() => setConfirmacion('eliminar')}>
                   Eliminar evento
                 </button>
               )}
@@ -596,6 +649,41 @@ export default function EventoModal({ fecha, eventoId, onCerrar, onGuardado }) {
           </form>
         )}
       </div>
+
+      {confirmacion && (
+        <div
+          className="modal-confirmacion-overlay"
+          onClick={(e) => {
+            e.stopPropagation();
+            setConfirmacion(null);
+          }}
+        >
+          <div className="modal-confirmacion" onClick={(e) => e.stopPropagation()}>
+            <h3>
+              {confirmacion === 'eliminar' ? '¿Eliminar el evento?' : '¿Salir sin guardar?'}
+            </h3>
+            <p>
+              {confirmacion === 'eliminar'
+                ? 'Esta accion no se puede deshacer. ¿Seguro que quieres eliminar este evento?'
+                : 'Ya hiciste cambios en esta reservacion y se perderan si sales ahora.'}
+            </p>
+            <div className="modal-confirmacion-acciones">
+              <button type="button" className="btn-agregar" onClick={() => setConfirmacion(null)}>
+                {confirmacion === 'eliminar' ? 'Mejor no' : 'Seguir editando'}
+              </button>
+              {confirmacion === 'eliminar' ? (
+                <button type="button" className="btn-peligro" onClick={handleEliminar}>
+                  Si, eliminar
+                </button>
+              ) : (
+                <button type="button" className="btn-peligro" onClick={onCerrar}>
+                  Salir sin guardar
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -56,7 +56,7 @@ export default function Configuracion() {
           onChange={(e) => setNuevoEmail(e.target.value)}
           required
         />
-        <button type="submit" className="btn-primario">Agregar</button>
+        <button type="submit" className="btn-agregar">Agregar</button>
       </form>
 
       {cargando ? (

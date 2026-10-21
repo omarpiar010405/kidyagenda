@@ -1,60 +1,226 @@
-* { box-sizing: border-box; }
+/* =====================================================
+   KIDYLAND · TOKENS DE MARCA
+   Estilo comic / superheroe. Ver guia de estilo.
+   ===================================================== */
+:root {
+  /* Colores principales */
+  --kidy-morado: #7b00d9;
+  --kidy-azul: #0a78ff;
+  --kidy-rosa: #ff4d9a;
+  --kidy-amarillo: #ffc907;
+  --kidy-naranja: #ff5c00;
+  --kidy-verde: #0db04b;
+  --kidy-celeste: #0bdfff;
+  --kidy-rojo: #ff0047;
 
-html, body { margin: 0; padding: 0; }
+  /* Texto y contornos */
+  --kidy-marino: #0b1a4f;
+  --kidy-indigo: #1f1a8f;
+
+  /* Tintes suaves */
+  --kidy-rosa-claro: #ffe9f3;
+  --kidy-celeste-claro: #e6faff;
+  --kidy-lavanda: #f1e6ff;
+  --kidy-amarillo-claro: #fff4bf;
+
+  /* Rayos de comic */
+  --kidy-rayo-celeste: #8ee3f5;
+  --kidy-rayo-lavanda: #9a8cf0;
+
+  /* Formas */
+  --kidy-borde: 4px;
+  --kidy-borde-fino: 3px;
+  --kidy-sombra: 6px 6px 0 var(--kidy-marino);
+  --kidy-sombra-sm: 4px 4px 0 var(--kidy-marino);
+  --kidy-sombra-xs: 3px 3px 0 var(--kidy-marino);
+  --kidy-radio: 20px;
+  --kidy-radio-sm: 14px;
+
+  /* Tipografia */
+  --kidy-fuente: 'Baloo 2', 'Arial Rounded MT Bold', 'Trebuchet MS', Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
 
 body {
-  font-family: 'Segoe UI', Roboto, Arial, sans-serif;
-  background: #f4f5f7;
-  color: #222;
+  font-family: var(--kidy-fuente);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--kidy-marino);
+  /* Fondo blanco con medios tonos (halftone) tenues */
+  background-color: #fff;
+  background-image: radial-gradient(rgba(11, 26, 79, 0.09) 1.3px, transparent 1.4px);
+  background-size: 18px 18px;
+  background-attachment: fixed;
 }
 
-input, textarea, select, button {
+input,
+textarea,
+select,
+button {
   font-family: inherit;
-  font-size: 14px;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--kidy-marino);
 }
 
-input, textarea, select {
-  padding: 8px 10px;
-  border: 1px solid #d0d3d9;
-  border-radius: 6px;
+input,
+textarea,
+select {
+  padding: 10px 12px;
+  border: var(--kidy-borde-fino) solid var(--kidy-marino);
+  border-radius: var(--kidy-radio-sm);
+  background: #fff;
   width: 100%;
+  box-shadow: var(--kidy-sombra-xs);
+  transition: box-shadow 0.12s ease, transform 0.12s ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--kidy-morado);
+  box-shadow: var(--kidy-sombra-sm);
 }
 
 textarea {
-  min-height: 60px;
+  min-height: 64px;
   resize: vertical;
 }
 
+select {
+  cursor: pointer;
+}
+
+/* Cajas de seleccion con contorno grueso de caricatura */
+input[type='checkbox'] {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: var(--kidy-borde-fino) solid var(--kidy-marino);
+  border-radius: 7px;
+  box-shadow: var(--kidy-sombra-xs);
+  accent-color: var(--kidy-morado);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* --- Botones: pildora, contorno grueso, sombra dura --- */
 button {
   cursor: pointer;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 14px;
-  background: #e5e7eb;
+  border: var(--kidy-borde-fino) solid var(--kidy-marino);
+  border-radius: 999px;
+  padding: 10px 20px;
+  min-height: 52px;
+  background: var(--kidy-celeste-claro);
+  color: var(--kidy-marino);
+  font-weight: 800;
+  box-shadow: var(--kidy-sombra-xs);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
+button:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--kidy-marino);
+}
+
+button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--kidy-marino);
+}
+
+/* Accion principal: naranja con letras blancas y sombra marino */
 .btn-primario {
-  background: #4f46e5;
-  color: white;
-  font-weight: 600;
+  background: var(--kidy-naranja);
+  color: #fff;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: var(--kidy-sombra-sm);
 }
 
-.btn-primario:hover { background: #4338ca; }
+.btn-primario:hover {
+  background: #e64f00;
+  box-shadow: 5px 5px 0 var(--kidy-marino);
+}
 
+/* Accion secundaria: azul rey */
+.btn-secundario {
+  background: var(--kidy-azul);
+  color: #fff;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: var(--kidy-sombra-xs);
+}
+
+.btn-secundario:hover {
+  background: #0062d6;
+  box-shadow: 4px 4px 0 var(--kidy-marino);
+}
+
+/* Sumar: amarillo estrella */
+.btn-agregar {
+  background: var(--kidy-amarillo);
+  color: var(--kidy-marino);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: var(--kidy-sombra-xs);
+}
+
+.btn-agregar:hover {
+  background: #efb500;
+  box-shadow: 4px 4px 0 var(--kidy-marino);
+}
+
+/* Quitar / peligro: rosa chicle */
 .btn-peligro {
-  background: #ef4444;
-  color: white;
+  background: var(--kidy-rosa);
+  color: #fff;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: var(--kidy-sombra-xs);
 }
 
-.btn-peligro:hover { background: #dc2626; }
+.btn-peligro:hover {
+  background: #e63b86;
+  box-shadow: 4px 4px 0 var(--kidy-marino);
+}
 
 .btn-cerrar {
-  background: transparent;
-  font-size: 18px;
+  background: #fff;
+  color: var(--kidy-marino);
+  font-size: 20px;
+  line-height: 1;
+  width: 48px;
+  min-height: 48px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
 }
 
 /* Evita el zoom automatico de iOS al enfocar inputs pequenos */
 @media (max-width: 768px) {
-  input, select, textarea, button { font-size: 16px; }
-  body { padding-bottom: 0; }
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px;
+  }
+  body {
+    padding-bottom: 0;
+  }
 }
