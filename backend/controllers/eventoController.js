@@ -8,6 +8,7 @@ const {
   Pago,
 } = require('../models');
 const { notificarEvento } = require('../services/emailService');
+const cache = require('../services/cacheService');
 
 const INCLUDES_COMPLETOS = [
   { model: Cliente },
@@ -18,6 +19,15 @@ const INCLUDES_COMPLETOS = [
 ];
 
 const fechaHoy = () => new Date().toISOString().slice(0, 10);
+
+// Prefijos de caché relacionados con eventos.
+const PREFIJO_EVENTOS = 'eventos:';
+const PREFIJO_CLIENTES = 'clientes';
+const claveMes = (mes, anio) => `${PREFIJO_EVENTOS}mes:${mes}-${anio}`;
+const claveEvento = (id) => `${PREFIJO_EVENTOS}id:${id}`;
+
+// Invalida todo lo que dependa de los eventos (listados por mes y por id).
+const invalidarEventos = () => cache.invalidar(PREFIJO_EVENTOS);
 
 const fmtMonto = (v) => {
   const n = Number(v);
@@ -168,6 +178,10 @@ function calcularEstadoPago(total, pagos) {
 exports.listarPorMes = async (req, res, next) => {
   try {
     const { mes, anio } = req.query;
+    const clave = mes && anio ? claveMes(mes, anio) : `${PREFIJO_EVENTOS}mes:all`;
+    const enCache = cache.obtener(clave);
+    if (enCache !== undefined) return res.json(enCache);
+
     const where = {};
 
     if (mes && anio) {
@@ -181,7 +195,9 @@ exports.listarPorMes = async (req, res, next) => {
       include: [{ model: Cliente }],
       order: [['fecha_evento', 'ASC'], ['hora_inicio', 'ASC']],
     });
-    res.json(eventos);
+    const datos = eventos.map((e) => e.toJSON());
+    cache.guardar(clave, datos);
+    res.json(datos);
   } catch (err) {
     next(err);
   }
@@ -190,9 +206,15 @@ exports.listarPorMes = async (req, res, next) => {
 // GET /api/eventos/:id
 exports.obtener = async (req, res, next) => {
   try {
+    const clave = claveEvento(req.params.id);
+    const enCache = cache.obtener(clave);
+    if (enCache !== undefined) return res.json(enCache);
+
     const evento = await Evento.findByPk(req.params.id, { include: INCLUDES_COMPLETOS });
     if (!evento) return res.status(404).json({ error: 'Evento no encontrado' });
-    res.json(evento);
+    const datos = evento.toJSON();
+    cache.guardar(clave, datos);
+    res.json(datos);
   } catch (err) {
     next(err);
   }
@@ -290,6 +312,9 @@ exports.crear = async (req, res, next) => {
 
     const eventoCompleto = await Evento.findByPk(nuevoEvento.id_evento, { include: INCLUDES_COMPLETOS });
 
+    invalidarEventos();
+    cache.invalidar(PREFIJO_CLIENTES);
+
     // Envio de correo de forma asincrona: no bloquea la respuesta al cliente.
     notificarEvento(eventoCompleto, 'creado');
 
@@ -371,6 +396,8 @@ exports.actualizar = async (req, res, next) => {
     const cambios = compararEventos(eventoAnterior, eventoActualizado);
     notificarEvento(eventoActualizado, 'actualizado', cambios);
 
+    invalidarEventos();
+
     res.json(eventoActualizado);
   } catch (err) {
     next(err);
@@ -383,6 +410,7 @@ exports.eliminar = async (req, res, next) => {
     const evento = await Evento.findByPk(req.params.id);
     if (!evento) return res.status(404).json({ error: 'Evento no encontrado' });
     await evento.destroy();
+    invalidarEventos();
     res.status(204).send();
   } catch (err) {
     next(err);

@@ -16,7 +16,7 @@ function formatearFecha(anio, mes, dia) {
  * Calendario mensual simple. mes es 1-12.
  * eventosPorDia: { 'YYYY-MM-DD': [evento, evento, ...] }
  */
-export default function CalendarioMensual({ mes, anio, eventosPorDia, onCambiarMes, onSeleccionarDia }) {
+export default function CalendarioMensual({ mes, anio, eventosPorDia, cargando, onCambiarMes, onSeleccionarDia }) {
   const celdas = useMemo(() => {
     const primerDiaSemana = new Date(anio, mes - 1, 1).getDay(); // 0=Dom
     const diasEnMes = new Date(anio, mes, 0).getDate();
@@ -56,6 +56,12 @@ export default function CalendarioMensual({ mes, anio, eventosPorDia, onCambiarM
         ))}
       </div>
 
+      {cargando ? (
+        <div className="calendario-cargando">
+          <span className="calendario-cargando-icono">🎈</span>
+          <span>Cargando las KidyFiestas…</span>
+        </div>
+      ) : (
       <div className="calendario-grid">
         {celdas.map((dia, idx) => {
           if (!dia) return <div key={`vacio-${idx}`} className="calendario-celda vacia" />;
@@ -84,6 +90,7 @@ export default function CalendarioMensual({ mes, anio, eventosPorDia, onCambiarM
           );
         })}
       </div>
+      )}
     </div>
   );
 }

@@ -3,6 +3,18 @@ import CalendarioMensual from '../components/CalendarioMensual';
 import PanelDia from '../components/PanelDia';
 import EventoModal from '../components/EventoModal';
 import { getEventosPorMes } from '../api/api';
+import { suscribir } from '../api/cache';
+
+// Agrupa los eventos por fecha para pintarlos en el calendario.
+function agruparPorDia(eventos) {
+  const agrupados = {};
+  (eventos || []).forEach((ev) => {
+    const fecha = ev.fecha_evento;
+    if (!agrupados[fecha]) agrupados[fecha] = [];
+    agrupados[fecha].push(ev);
+  });
+  return agrupados;
+}
 
 export default function CalendarioPage() {
   const hoy = new Date();
@@ -12,22 +24,28 @@ export default function CalendarioPage() {
   const [diaSeleccionado, setDiaSeleccionado] = useState(null);
   const [eventosDelDia, setEventosDelDia] = useState([]);
   const [modal, setModal] = useState(null); // { fecha, eventoId } | null
+  const [cargando, setCargando] = useState(true);
 
   const cargarEventos = useCallback(() => {
-    getEventosPorMes(mes, anio).then((eventos) => {
-      const agrupados = {};
-      eventos.forEach((ev) => {
-        const fecha = ev.fecha_evento;
-        if (!agrupados[fecha]) agrupados[fecha] = [];
-        agrupados[fecha].push(ev);
-      });
-      setEventosPorDia(agrupados);
-    });
+    setCargando(true);
+    return getEventosPorMes(mes, anio)
+      .then((eventos) => {
+        setEventosPorDia(agruparPorDia(eventos));
+      })
+      .finally(() => setCargando(false));
   }, [mes, anio]);
 
   useEffect(() => {
     cargarEventos();
   }, [cargarEventos]);
+
+  // Cuando la caché se refresca en segundo plano, actualiza el calendario.
+  useEffect(() => {
+    const clave = `eventos:mes:${mes}-${anio}`;
+    return suscribir((claveActualizada, valor) => {
+      if (claveActualizada === clave) setEventosPorDia(agruparPorDia(valor));
+    });
+  }, [mes, anio]);
 
   const cambiarMes = (delta) => {
     let nuevoMes = mes + delta;
@@ -56,6 +74,7 @@ export default function CalendarioPage() {
         mes={mes}
         anio={anio}
         eventosPorDia={eventosPorDia}
+        cargando={cargando}
         onCambiarMes={cambiarMes}
         onSeleccionarDia={seleccionarDia}
       />
